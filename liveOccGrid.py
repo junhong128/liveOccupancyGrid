@@ -41,7 +41,7 @@ GRID_Y_MIN_M = -0.6         #max right (negative)
 LOG_ODDS_OCC = 0.8          #inc for occ
 LOG_ODDS_FREE = -0.3        #dec for free
 LOG_ODDS_MIN = -2.5         #min clamp
-LOG_ODDS_MAX =  2.5         #max clamp
+LOG_ODDS_MAX = 2.5          #max clamp
 PROB_THRESHOLD = 0.65       #p > PROB_THRESHOLD = occ
 
 #raycasting n sampling
@@ -116,17 +116,18 @@ def draw_grid(logodds):
     img[free] = COLOR_FREE
     img[occupied] = COLOR_OCC
 
+    #flip y (left of cam = left of red dot)
+    img = cv2.flip(img, 1)
+
     if SHOW_DEBUG and last_endpoints is not None:
         rr, cc = last_endpoints
-        mask = (rr >= 0) & (rr < grid_rows) & (cc >= 0) & (cc < grid_cols)
-        img[rr[mask], cc[mask]] = (0, 128, 0)
-
-
-
+        cc_flipped = (grid_cols - 1) - cc
+        mask = (rr >= 0) & (rr < grid_rows) & (cc_flipped >= 0) & (cc_flipped < grid_cols)
+        img[rr[mask], cc_flipped[mask]] = (0, 128, 0)
 
     #red dot -> camera
     r_draw = origin_row
-    c_draw = origin_col
+    c_draw = (grid_cols - 1) - origin_col
     if 0 <= r_draw < img.shape[0] and 0 <= c_draw < img.shape[1]:
         img = np.ascontiguousarray(img)
         cv2.circle(img, (int(c_draw), int(r_draw)), 2, (0, 0, 255), -1)
