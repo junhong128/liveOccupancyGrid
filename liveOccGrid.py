@@ -14,6 +14,8 @@ import pyrealsense2 as rs
 #gui
 SHOW_GUI = True
 VIS_SCALE = 10
+SHOW_DEBUG = False
+last_endpoints = None
 
 #depth stream res (424×240@30, 640×480@15–30, 320×240@30)
 DEPTH_WIDTH = 424
@@ -26,21 +28,21 @@ CAM_PITCH_DEG = 5.0     #measure n change (downward degree)
 
 #depth range
 MIN_DEPTH_M = 0.25
-MAX_DEPTH_M = 2.5
+MAX_DEPTH_M = 1
 
 #cam -> grid config
 GRID_RES_M = 0.05           #cell size
 GRID_X_MAX_M = 1            #max forward
 GRID_X_MIN_M = -0.2         #max backward (negative)
-GRID_Y_MAX_M = 1.2          #max left
-GRID_Y_MIN_M = -1.2         #max right (negative)
+GRID_Y_MAX_M = 0.6          #max left
+GRID_Y_MIN_M = -0.6         #max right (negative)
 
 #logodds config
-LOG_ODDS_OCC = 1            #inc for occ
+LOG_ODDS_OCC = 0.8          #inc for occ
 LOG_ODDS_FREE = -0.3        #dec for free
 LOG_ODDS_MIN = -2.5         #min clamp
 LOG_ODDS_MAX =  2.5         #max clamp
-PROB_THRESHOLD = 0.6        #p > PROB_THRESHOLD = occ
+PROB_THRESHOLD = 0.65       #p > PROB_THRESHOLD = occ
 
 #raycasting n sampling
 SUBSAMPLE_STEP_V = 2        #rows
@@ -114,12 +116,17 @@ def draw_grid(logodds):
     img[free] = COLOR_FREE
     img[occupied] = COLOR_OCC
 
-    #flip -> top of grid = front of cam
-    img = cv2.flip(img, 0)
-    r_draw = (grid_rows - 1) - origin_row
-    c_draw = origin_col
+    if SHOW_DEBUG and last_endpoints is not None:
+        rr, cc = last_endpoints
+        mask = (rr >= 0) & (rr < grid_rows) & (cc >= 0) & (cc < grid_cols)
+        img[rr[mask], cc[mask]] = (0, 128, 0)
+
+
+
 
     #red dot -> camera
+    r_draw = origin_row
+    c_draw = origin_col
     if 0 <= r_draw < img.shape[0] and 0 <= c_draw < img.shape[1]:
         img = np.ascontiguousarray(img)
         cv2.circle(img, (int(c_draw), int(r_draw)), 2, (0, 0, 255), -1)
@@ -128,16 +135,20 @@ def draw_grid(logodds):
     return img
 
 def update_grid_with_points(xs, ys):
-    global logodds
+    global logodds, last_endpoints
     H, W = logodds.shape
 
     #convert meter to grid cell
     rows, cols, inb = world_to_grid(xs, ys, logodds.shape)
-    rows = rows[inb]; cols = cols[inb]
+    rows = rows[inb]
+    cols = cols[inb]
 
     #robot cell
     if not (0 <= origin_row < H and 0 <= origin_col < W):
         return
+    
+    eps_r = []
+    eps_c = []
 
     for r_end, c_end in zip(rows, cols):
         #mark free cells
@@ -157,6 +168,10 @@ def update_grid_with_points(xs, ys):
             rr, cc = pts[-1]
             if 0 <= rr < H and 0 <= cc < W:
                 logodds[rr, cc] += LOG_ODDS_OCC
+                eps_r.append(rr)
+                eps_c.append(cc)
+
+    last_endpoints = (np.array(eps_r, dtype=np.int32), np.array(eps_c, dtype=np.int32)) if eps_r else None
 
     #clamp
     np.clip(logodds, LOG_ODDS_MIN, LOG_ODDS_MAX, out=logodds)
