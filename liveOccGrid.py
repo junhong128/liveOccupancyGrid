@@ -16,6 +16,7 @@ SHOW_GUI = True
 VIS_SCALE = 10
 SHOW_DEBUG = False
 last_endpoints = None
+FRAME_ONLY = True
 
 #depth stream res (424×240@30, 640×480@15–30, 320×240@30)
 DEPTH_WIDTH = 424
@@ -23,19 +24,19 @@ DEPTH_HEIGHT = 240
 DEPTH_FPS = 30
 
 #cam mount
-CAM_HEIGHT_M = 0.20     #measure n change
+CAM_HEIGHT_M = 0.1     #measure n change
 CAM_PITCH_DEG = 5.0     #measure n change (downward degree)
 
 #depth range
-MIN_DEPTH_M = 0.25
+MIN_DEPTH_M = 0.1
 MAX_DEPTH_M = 1
 
 #cam -> grid config
-GRID_RES_M = 0.05           #cell size
+GRID_RES_M = 0.02           #cell size
 GRID_X_MAX_M = 1            #max forward
 GRID_X_MIN_M = -0.2         #max backward (negative)
-GRID_Y_MAX_M = 0.6          #max left
-GRID_Y_MIN_M = -0.6         #max right (negative)
+GRID_Y_MAX_M = 0.3            #max left
+GRID_Y_MIN_M = -0.3           #max right (negative)
 
 #logodds config
 LOG_ODDS_OCC = 0.8          #inc for occ
@@ -262,11 +263,14 @@ def main():
 
             #keep points near ground
             z_robot = pts_robot[2, :]
-            keep = (z_robot > -0.10) & (z_robot < 1.00)
+            keep = (z_robot > -0.02) & (z_robot < 1.00)
 
             #get position of dots
             xr = pts_robot[0, keep]
             yr = pts_robot[1, keep]
+
+            if FRAME_ONLY:
+                logodds.fill(0.0)
 
             update_grid_with_points(xr, yr)
 
