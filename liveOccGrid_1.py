@@ -1,3 +1,11 @@
+########################################################
+#real-time occupancy grid construction
+#scans whole vision field
+#uses raycasting
+########################################################
+
+
+
 import os
 import sys
 import math
